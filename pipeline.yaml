@@ -46,5 +46,5 @@ steps:
       - echo "FROM alpine" > Dockerfile
       - echo 'CMD echo "Hello from Buildkite Registry!"' >> Dockerfile
       - docker build -t packages.buildkite.com/mykematt/mykematt/hello-world .
-      - echo "$BUILDKITE_PACKAGE_REGISTRY_TOKEN" | docker login packages.buildkite.com -u buildkite --password-stdin
+      - echo "$BUILDKITE_PACKAGE_REGISTRY_TOKEN" | docker login packages.buildkite.com/mykematt/mykematt -u buildkite --password-stdin
       - docker push packages.buildkite.com/mykematt/mykematt/hello-world
