@@ -1,0 +1,50 @@
+steps:
+  - label: ":speech_balloon: Sentence"
+    key: "sentence"
+    plugins:
+      - docker#v5.12.0:
+          image: "python:3.13"
+          mount-buildkite-agent: true
+          user: "1000:1000"
+    commands:
+      - python -m venv venv
+      - . venv/bin/activate
+      - pip install .
+      - python -c "import loremipsum; print(loremipsum.sentence(max_char=20))" > result.txt
+      - buildkite-agent annotate --style "info" "$(cat result.txt)"
+
+  - label: ":scroll: Paragraph"
+    key: "paragraph"
+    depends_on: "sentence"
+    plugins:
+      - docker#v5.12.0:
+          image: "python:3.13"
+          mount-buildkite-agent: true
+          user: "1000:1000"
+    commands:
+      - python -m venv venv
+      - . venv/bin/activate
+      - pip install .
+      - python -c "import loremipsum; print(loremipsum.paragraph(max_char=100))" > result2.txt
+      - buildkite-agent annotate --style "info" "$(cat result2.txt)"
+    artifact_paths:
+      - result2.txt
+
+  - label: ":package: Download and Print result2.txt"
+    key: "artifact-step"
+    depends_on: "paragraph"
+    commands:
+      - buildkite-agent artifact download result2.txt .
+      - echo "---"
+      - echo "\U0001F4E6 Contents of result2.txt:"
+      - cat result2.txt
+
+  - label: ":whale: Build & Push Hello Image"
+    key: "push-image"
+    depends_on: "paragraph"
+    commands:
+      - echo "FROM alpine" > Dockerfile
+      - echo 'CMD echo "Hello from Buildkite Registry!"' >> Dockerfile
+      - docker build -t packages.buildkite.com/mykematt/mykematt/hello-world .
+      - echo "$BUILDKITE_PACKAGE_REGISTRY_TOKEN" | docker login packages.buildkite.com -u buildkite --password-stdin
+      - docker push packages.buildkite.com/mykematt/mykematt/hello-world
